@@ -1,12 +1,10 @@
 package main
 
 import (
-	"bufio"
-	"compress/gzip"
-	"encoding/json"
-	"fmt"
-	"net/http"
+	"context"
+	"embed"
 	"os"
+	"text/template"
 	"time"
 
 	"github.com/nbd-wtf/go-nostr"
@@ -17,44 +15,48 @@ const (
 	TMDB_PERSONS = "http://files.tmdb.org/p/exports/person_ids_01_02_2006.json.gz"
 )
 
+//go:embed tmdb.md omdb.md
+var templates embed.FS
+
+var (
+	tmdbApiKey   string
+	tmdbNostrKey string
+	tmdbRelay    string
+
+	tmdbParsed *template.Template
+
+	omdbApiKey   string
+	omdbNostrKey string
+	omdbRelay    string
+
+	omdbParsed *template.Template
+
+	now  = time.Now().Add(time.Hour * -3)
+	pool *nostr.SimplePool
+)
+
 func main() {
-	now := time.Now()
-	tmdbApiKey := os.Getenv("TMDB_API_KEY")
+	tmdbApiKey = os.Getenv("TMDB_API_KEY")
+	tmdbNostrKey = os.Getenv("TMDB_NOSTR_KEY")
+	tmdbRelay = os.Getenv("TMDB_RELAY")
 
-	fmt.Println(now.Format(TMDB_MOVIES))
-	resp, err := http.Get(now.Format(TMDB_MOVIES))
+	var err error
+	tmdbParsed, err = template.ParseFS(templates, "tmdb.md")
 	if err != nil {
 		panic(err)
 	}
-	defer resp.Body.Close()
 
-	gr, err := gzip.NewReader(resp.Body)
+	omdbApiKey = os.Getenv("OMDB_API_KEY")
+	omdbNostrKey = os.Getenv("OMDB_NOSTR_KEY")
+	omdbRelay = os.Getenv("OMDB_RELAY")
+
+	omdbParsed, err = template.ParseFS(templates, "omdb.md")
 	if err != nil {
 		panic(err)
 	}
-	defer gr.Close()
 
-	scanner := bufio.NewScanner(gr)
-	for scanner.Scan() {
-		var movie TMDBMovie
-		if err := json.Unmarshal(scanner.Bytes(), &movie); err != nil {
-			panic(err)
-		}
+	pool = nostr.NewSimplePool(context.Background())
 
-		fmt.Println(movie.ID)
-		resp, err := http.Get(fmt.Sprintf("https://api.themoviedb.org/3/movie/%d?api_key=%s", movie.ID, tmdbApiKey))
-		if err != nil {
-			panic(err)
-		}
-		if err := json.NewDecoder(resp.Body).Decode(&movie); err != nil {
-			panic(err)
-		}
-		resp.Body.Close()
-
-		evt := nostr.Event{
-			CreatedAt: nostr.Now(),
-			Kind:      30818,
-			Tags:      nostr.Tags{},
-		}
-	}
+	movies()
+	persons()
 }
