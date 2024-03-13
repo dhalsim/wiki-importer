@@ -2,9 +2,14 @@ module fiatjaf/wiki-importer
 
 go 1.21.6
 
-require github.com/nbd-wtf/go-nostr v0.29.2
+require (
+	github.com/PuerkitoBio/goquery v1.9.1
+	github.com/nbd-wtf/go-nostr v0.29.2
+	golang.org/x/net v0.21.0
+)
 
 require (
+	github.com/andybalholm/cascadia v1.3.2 // indirect
 	github.com/btcsuite/btcd/btcec/v2 v2.3.2 // indirect
 	github.com/btcsuite/btcd/chaincfg/chainhash v1.0.2 // indirect
 	github.com/decred/dcrd/crypto/blake256 v1.0.1 // indirect
@@ -19,5 +24,8 @@ require (
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
 	golang.org/x/exp v0.0.0-20230425010034-47ecfdc1ba53 // indirect
-	golang.org/x/sys v0.8.0 // indirect
+	golang.org/x/sys v0.17.0 // indirect
+	golang.org/x/text v0.14.0 // indirect
 )
+
+replace github.com/nbd-wtf/go-nostr => ../go-nostr

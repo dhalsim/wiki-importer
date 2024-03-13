@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/nbd-wtf/go-nostr"
+	"github.com/nbd-wtf/go-nostr/nip54"
 )
 
 func movies() {
@@ -82,7 +83,7 @@ func tmdb(line []byte) string {
 		CreatedAt: nostr.Now(),
 		Kind:      30818,
 		Tags: nostr.Tags{
-			{"d", strings.ReplaceAll(strings.ToLower(movie.Title), " ", "-")},
+			{"d", nip54.NormalizeIdentifier(movie.Title)},
 		},
 		Content: content.String(),
 	}
@@ -126,7 +127,7 @@ func omdb(imdbId string) {
 		CreatedAt: nostr.Now(),
 		Kind:      30818,
 		Tags: nostr.Tags{
-			{"d", strings.ReplaceAll(strings.ToLower(movie.Title), " ", "-")},
+			{"d", nip54.NormalizeIdentifier(movie.Title)},
 		},
 		Content: content.String(),
 	}
