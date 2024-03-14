@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -15,7 +17,16 @@ import (
 )
 
 func behindthename() {
-	for i := 1; i < 101; i++ {
+	pageStart := 1
+	if len(os.Args) > 1 {
+		pageArg, _ := strconv.Atoi(os.Args[1])
+		if pageArg > 0 {
+			pageStart = pageArg
+		}
+	}
+
+	for i := pageStart; i < 101; i++ {
+		fmt.Println("PAGE", i)
 		proceed := doPage(i)
 		if !proceed {
 			break
@@ -25,9 +36,16 @@ func behindthename() {
 }
 
 func doPage(num int) bool {
-	resp, err := http.Get(fmt.Sprintf("https://www.behindthename.com/names/%d", num))
-	if err != nil {
-		panic(err)
+	var resp *http.Response
+	var err error
+	for {
+		resp, err = http.Get(fmt.Sprintf("https://www.behindthename.com/names/%d", num))
+		if err != nil {
+			fmt.Println("error page", num, err, "trying again")
+			time.Sleep(time.Minute * 5)
+			continue
+		}
+		break
 	}
 	doc, err := goquery.NewDocumentFromReader(resp.Body)
 	if err != nil {
@@ -52,9 +70,16 @@ func doPage(num int) bool {
 }
 
 func doName(url string, name string) {
-	resp, err := http.Get(url)
-	if err != nil {
-		panic(err)
+	var resp *http.Response
+	var err error
+	for {
+		resp, err = http.Get(url)
+		if err != nil {
+			fmt.Println("error", url, err, "trying again")
+			time.Sleep(5 * time.Minute)
+			continue
+		}
+		break
 	}
 	doc, err := goquery.NewDocumentFromReader(resp.Body)
 	if err != nil {
@@ -99,13 +124,17 @@ func doName(url string, name string) {
 		Content: def,
 	}
 	evt.Sign(nostrKey)
-	fmt.Println(d, "|", name, "|", evt.Content)
+	fmt.Println(d, "|", name)
 
 	r, err := pool.EnsureRelay(relay)
 	if err != nil {
-		panic(err)
+		fmt.Println("error connecting to relay", err)
+		time.Sleep(time.Minute * 5)
+		return
 	}
 	if err := r.Publish(context.Background(), evt); err != nil {
-		panic(err)
+		fmt.Println("error publishing", err)
+		time.Sleep(time.Minute * 5)
+		return
 	}
 }
