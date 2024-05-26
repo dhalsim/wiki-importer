@@ -83,6 +83,7 @@ func tmdb(line []byte) string {
 		CreatedAt: nostr.Now(),
 		Kind:      30818,
 		Tags: nostr.Tags{
+			{"title", movie.Title},
 			{"d", nip54.NormalizeIdentifier(movie.Title)},
 		},
 		Content: content.String(),
@@ -127,6 +128,7 @@ func omdb(imdbId string) {
 		CreatedAt: nostr.Now(),
 		Kind:      30818,
 		Tags: nostr.Tags{
+			{"title", movie.Title},
 			{"d", nip54.NormalizeIdentifier(movie.Title)},
 		},
 		Content: content.String(),
