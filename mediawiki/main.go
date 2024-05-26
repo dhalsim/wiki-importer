@@ -70,7 +70,7 @@ func main() {
 			Content: md,
 		}
 
-		if strings.HasPrefix(md, "1.  REDIRECT") {
+		if strings.HasPrefix(strings.ToUpper(md), "1.  REDIRECT") {
 			spl := strings.Split(md, "[[")
 			spl = strings.Split(spl[1], "#")
 			spl = strings.Split(spl[0], "]]")

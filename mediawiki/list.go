@@ -35,7 +35,7 @@ func list(host string) chan string {
 				qs.Set("apcontinue", apcontinue)
 			}
 
-			r, err := http.Get("https://" + host + "/w/api.php?" + qs.Encode())
+			r, err := http.Get(apiBase(host) + "?" + qs.Encode())
 			if err != nil {
 				panic(err)
 			}

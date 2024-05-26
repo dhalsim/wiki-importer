@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"os/exec"
+	"strings"
 )
 
 type PageResult struct {
@@ -26,7 +27,7 @@ func markdown(host string, page string) (string, string, error) {
 		"page":   {page},
 	}
 
-	r, err := http.Get("https://" + host + "/w/api.php?" + qs.Encode())
+	r, err := http.Get(apiBase(host) + "?" + qs.Encode())
 	if err != nil {
 		return "", "", err
 	}
@@ -38,8 +39,17 @@ func markdown(host string, page string) (string, string, error) {
 	}
 	r.Body.Close()
 
+	wikitext := strings.Builder{}
+	wikitext.Grow(len(res.Parse.Wikitext.All))
+	for _, line := range strings.Split(res.Parse.Wikitext.All, "\n") {
+		if strings.HasPrefix(line, "{|") || strings.HasPrefix(line, "|") || strings.HasPrefix(line, "<!--") || strings.HasPrefix(line, "{{Clear}}") {
+			continue
+		}
+		wikitext.WriteString(line)
+	}
+
 	cmd := exec.Command("pandoc", "--lua-filter", "mediawiki/wikilink.lua", "-f", "mediawiki", "-t", "commonmark", "-")
-	cmd.Stdin = bytes.NewBufferString(res.Parse.Wikitext.All)
+	cmd.Stdin = bytes.NewBufferString(wikitext.String())
 	stderr := &bytes.Buffer{}
 	cmd.Stderr = stderr
 	markdown, err := cmd.Output()
