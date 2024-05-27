@@ -20,6 +20,12 @@ func nodeToString(str *strings.Builder, node *html.Node) {
 			}
 		case "br":
 			str.WriteByte('\n')
+		case "p":
+			str.WriteByte('\n')
+			for nextNode := node.FirstChild; nextNode != nil; nextNode = nextNode.NextSibling {
+				nodeToString(str, nextNode)
+			}
+			str.WriteByte('\n')
 		case "b":
 			str.WriteString("**")
 			for nextNode := node.FirstChild; nextNode != nil; nextNode = nextNode.NextSibling {
@@ -33,6 +39,10 @@ func nodeToString(str *strings.Builder, node *html.Node) {
 			}
 			str.WriteByte('_')
 		case "a":
+			if node.FirstChild == nil {
+				return
+			}
+
 			targetIdx := slices.IndexFunc(node.Attr, func(a html.Attribute) bool { return a.Key == "href" })
 			if targetIdx == -1 {
 				str.WriteString(removeNonUtf8(node.FirstChild.Data))

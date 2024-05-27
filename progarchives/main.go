@@ -26,10 +26,20 @@ func main() {
 	if v, err := strconv.Atoi(os.Getenv("CONTINUE")); err == nil {
 		start = v
 	}
+	var end int
 
-	for i := start; i <= 12736; i++ {
+	var fetch func(id int) (string, string, error)
+	if len(os.Args) > 1 && os.Args[1] == "albums" {
+		end = 75959
+		fetch = album
+	} else {
+		end = 12736
+		fetch = artist
+	}
+
+	for i := start; i <= end; i++ {
 		fmt.Println("id", i)
-		title, md, err := artist(i)
+		title, md, err := fetch(i)
 		if err != nil {
 			fmt.Println(err, "\n~~~~~~~~~\n-")
 			time.Sleep(2 * time.Second)

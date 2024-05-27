@@ -29,7 +29,7 @@ func artist(id int) (string, string, error) {
 	}
 	r.Body.Close()
 
-	title := doc.Find(`h1`).Text()
+	title := removeNonUtf8(doc.Find(`h1`).Text())
 	if title == "" {
 		return "", "", fmt.Errorf("title error")
 	}
