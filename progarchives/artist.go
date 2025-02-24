@@ -14,29 +14,31 @@ func artist(id int) (string, string, error) {
 	params := url.Values{"id": {strconv.Itoa(id)}}
 	requestUrl := "https://www.progarchives.com/artist.asp?" + params.Encode()
 
-	fmt.Println("Fetching artist from ", requestUrl)
+	logger.Printf("Fetching artist from %s\n", requestUrl)
 
 	r, err := makeRequest(requestUrl)
 	if err != nil {
-		return "", "", err
+		return "", "", fmt.Errorf("request failed: %w", err)
 	}
 
 	ct := r.Header.Get("Content-Type")
 	bodyReader, err := charset.NewReader(r.Body, ct)
 	if err != nil {
-		return "", "", err
+		return "", "", fmt.Errorf("charset reader failed: %w", err)
 	}
 
 	doc, err := goquery.NewDocumentFromReader(bodyReader)
 	if err != nil {
-		return "", "", err
+		return "", "", fmt.Errorf("goquery parse failed: %w", err)
 	}
 	r.Body.Close()
 
 	title, err := getTitle(doc)
 	if err != nil {
-		return "", "", err
+		return "", "", fmt.Errorf("get title failed: %w", err)
 	}
+
+	logger.Printf("Processing artist: %s\n", title)
 
 	cat := doc.Find(`h2`).First().Text()
 	if cat == "" || !strings.Contains(cat, "•") {

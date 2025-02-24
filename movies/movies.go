@@ -34,12 +34,16 @@ func movies() {
 		if err != nil {
 			logger.Printf("Error processing TMDB movie: %v\n", err)
 			continue
+		} else {
+			logger.Printf("Processed TMDB movie: %s, IMDBId: %s\n", normalizedIdentifier, imdbId)
 		}
 
 		// OMDB (use the imdb id to query this same movie)
 		if err := omdb(imdbId, normalizedIdentifier); err != nil {
 			logger.Printf("Error processing OMDB movie: %v\n", err)
 			continue
+		} else {
+			logger.Printf("Processed OMDB movie: %s, IMDBId: %s\n", normalizedIdentifier, imdbId)
 		}
 	}
 }
@@ -51,6 +55,8 @@ func tmdb(line []byte) (string, string, error) {
 	}
 
 	{
+		logger.Printf("Processing TMDB movie: %d, IMDBId: %s\n", movie.ID, movie.ImdbID)
+
 		// basic movie data
 		resp, err := http.Get(fmt.Sprintf("https://api.themoviedb.org/3/movie/%d?api_key=%s", movie.ID, tmdbApiKey))
 		if err != nil {
@@ -126,6 +132,8 @@ func omdb(imdbId string, normalizedIdentifier string) error {
 		return fmt.Errorf("decode OMDB movie: %w", err)
 	}
 	resp.Body.Close()
+
+	logger.Printf("Processing OMDB movie: %s, IMDBId: %s\n", normalizedIdentifier, imdbId)
 
 	movie.Director = splitAndWikilink(movie.Director)
 	movie.Writer = splitAndWikilink(movie.Writer)

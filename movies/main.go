@@ -52,6 +52,7 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("open log file: %w", err)
 	}
+
 	defer logFile.Close()
 
 	// Create logger that writes to both file and stdout
