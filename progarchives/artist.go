@@ -79,9 +79,7 @@ func artist(id int) (string, string, error) {
 `, albumTitle, albumYear))
 	})
 
-	return title, fmt.Sprintf(`= %s
-
-[[%s]], [[%s]]
+	return title, fmt.Sprintf(`[[%s]], [[%s]]
 
 image::%s[]
 
@@ -89,6 +87,6 @@ image::%s[]
 
 == Discography
 %s`,
-		title, category, country, image, bioText.String(), discography.String(),
+		category, country, image, bioText.String(), discography.String(),
 	), nil
 }

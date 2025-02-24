@@ -52,13 +52,11 @@ func album(id int) (string, string, error) {
 		nodeToString(&text, node)
 	}
 
-	return title, fmt.Sprintf(`= %s
-
-album from [[%s]]
+	return title, fmt.Sprintf(`album from [[%s]]
 
 image::%s[]
 
 %s`,
-		title, artist, imageUrl, text.String(),
+		artist, imageUrl, text.String(),
 	), nil
 }
