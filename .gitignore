@@ -1,2 +1,6 @@
 .env
 .vscode
+
+# generated files on build
+progarchives/progarchives
+movies/movies
