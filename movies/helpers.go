@@ -8,7 +8,7 @@ func splitAndWikilink(s string) string {
 		for i, item := range spl {
 			spl[i] = "[[" + item + "]]"
 		}
-		return strings.Join(spl, ",")
+		return strings.Join(spl, ", ")
 	}
 	return ""
 }
