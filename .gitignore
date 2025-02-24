@@ -4,3 +4,6 @@
 # generated files on build
 progarchives/progarchives
 movies/movies
+
+# logs
+movies/movies-errors.log
