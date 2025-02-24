@@ -30,14 +30,14 @@ func movies() {
 	scanner := bufio.NewScanner(gr)
 	for scanner.Scan() {
 		// TMDB
-		imdbId := tmdb(scanner.Bytes())
+		imdbId, normalizedIdentifier := tmdb(scanner.Bytes())
 
 		// OMDB (use the imdb id to query this same movie)
-		omdb(imdbId)
+		omdb(imdbId, normalizedIdentifier)
 	}
 }
 
-func tmdb(line []byte) string {
+func tmdb(line []byte) (string, string) {
 	var movie TMDBMovie
 	if err := json.Unmarshal(line, &movie); err != nil {
 		panic(err)
@@ -79,15 +79,18 @@ func tmdb(line []byte) string {
 		panic(err)
 	}
 
+	normalizedIdentifier := nip54.NormalizeIdentifier(movie.Title)
+
 	evt := nostr.Event{
 		CreatedAt: nostr.Now(),
 		Kind:      30818,
 		Tags: nostr.Tags{
 			{"title", movie.Title},
-			{"d", nip54.NormalizeIdentifier(movie.Title)},
+			{"d", normalizedIdentifier},
 		},
 		Content: content.String(),
 	}
+
 	evt.Sign(tmdbNostrKey)
 
 	relay, err := pool.EnsureRelay(tmdbRelay)
@@ -99,13 +102,13 @@ func tmdb(line []byte) string {
 		panic(err)
 	}
 
-	return movie.ImdbID
+	return movie.ImdbID, normalizedIdentifier
 }
 
-func omdb(imdbId string) {
+func omdb(imdbId string, normalizedIdentifier string) {
 	var movie OMDBMovie
 
-	resp, err := http.Get(fmt.Sprintf("https://www.omdbapi.com/?i=%s&plot=full&apikey=%s", imdbId, tmdbApiKey))
+	resp, err := http.Get(fmt.Sprintf("https://www.omdbapi.com/?i=%s&plot=full&apikey=%s", imdbId, omdbApiKey))
 	if err != nil {
 		panic(err)
 	}
@@ -115,9 +118,9 @@ func omdb(imdbId string) {
 	resp.Body.Close()
 
 	movie.Director = splitAndWikilink(movie.Director)
-	movie.Writer = splitAndWikilink(movie.Director)
-	movie.Actors = splitAndWikilink(movie.Director)
-	movie.Genre = splitAndWikilink(movie.Director)
+	movie.Writer = splitAndWikilink(movie.Writer)
+	movie.Actors = splitAndWikilink(movie.Actors)
+	movie.Genre = splitAndWikilink(movie.Genre)
 
 	content := &bytes.Buffer{}
 	if err := omdbParsed.Execute(content, movie); err != nil {
@@ -129,10 +132,11 @@ func omdb(imdbId string) {
 		Kind:      30818,
 		Tags: nostr.Tags{
 			{"title", movie.Title},
-			{"d", nip54.NormalizeIdentifier(movie.Title)},
+			{"d", normalizedIdentifier},
 		},
 		Content: content.String(),
 	}
+
 	evt.Sign(omdbNostrKey)
 
 	relay, err := pool.EnsureRelay(omdbRelay)

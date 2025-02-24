@@ -15,7 +15,7 @@ const (
 	TMDB_PERSONS = "http://files.tmdb.org/p/exports/person_ids_01_02_2006.json.gz"
 )
 
-//go:embed tmdb.md omdb.md
+//go:embed tmdb.adoc omdb.adoc
 var templates embed.FS
 
 var (
@@ -41,7 +41,7 @@ func main() {
 	tmdbRelay = os.Getenv("TMDB_RELAY")
 
 	var err error
-	tmdbParsed, err = template.ParseFS(templates, "tmdb.md")
+	tmdbParsed, err = template.ParseFS(templates, "tmdb.adoc")
 	if err != nil {
 		panic(err)
 	}
@@ -50,7 +50,7 @@ func main() {
 	omdbNostrKey = os.Getenv("OMDB_NOSTR_KEY")
 	omdbRelay = os.Getenv("OMDB_RELAY")
 
-	omdbParsed, err = template.ParseFS(templates, "omdb.md")
+	omdbParsed, err = template.ParseFS(templates, "omdb.adoc")
 	if err != nil {
 		panic(err)
 	}
