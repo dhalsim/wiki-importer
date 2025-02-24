@@ -39,7 +39,7 @@ func main() {
 
 	for i := start; i <= end; i++ {
 		fmt.Println("id", i)
-		title, md, err := fetch(i)
+		title, asciiDoc, err := fetch(i)
 		if err != nil {
 			fmt.Println(err, "\n~~~~~~~~~\n-")
 			time.Sleep(2 * time.Second)
@@ -54,7 +54,7 @@ func main() {
 				{"title", title},
 				{"d", nip54.NormalizeIdentifier(title)},
 			},
-			Content: md,
+			Content: asciiDoc,
 		}
 
 		if err := evt.Sign(nostrKey); err != nil {

@@ -2,36 +2,40 @@ package main
 
 import (
 	"fmt"
-	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
+	"golang.org/x/net/html/charset"
 )
 
 func artist(id int) (string, string, error) {
-	req, err := http.NewRequest("GET", "https://www.progarchives.com/artist.asp?"+url.Values{"id": {strconv.Itoa(id)}}.Encode(), nil)
+	params := url.Values{"id": {strconv.Itoa(id)}}
+	requestUrl := "https://www.progarchives.com/artist.asp?" + params.Encode()
+
+	fmt.Println("Fetching artist from ", requestUrl)
+
+	r, err := makeRequest(requestUrl)
 	if err != nil {
 		return "", "", err
 	}
 
-	req.Header.Add("user-agent", "Chrome")
-	req.Header.Add("accept", "text/html")
-	r, err := http.DefaultClient.Do(req)
+	ct := r.Header.Get("Content-Type")
+	bodyReader, err := charset.NewReader(r.Body, ct)
 	if err != nil {
 		return "", "", err
 	}
 
-	doc, err := goquery.NewDocumentFromReader(r.Body)
+	doc, err := goquery.NewDocumentFromReader(bodyReader)
 	if err != nil {
 		return "", "", err
 	}
 	r.Body.Close()
 
-	title := removeNonUtf8(doc.Find(`h1`).Text())
-	if title == "" {
-		return "", "", fmt.Errorf("title error")
+	title, err := getTitle(doc)
+	if err != nil {
+		return "", "", err
 	}
 
 	cat := doc.Find(`h2`).First().Text()
@@ -43,7 +47,11 @@ func artist(id int) (string, string, error) {
 	category := strings.TrimSpace(spl[0])
 	country := strings.TrimSpace(spl[1])
 
-	image := fmt.Sprintf("https://www.progarchives.com/progressive_rock_discography_band/%d.png", id)
+	image, imageFound := doc.Find(`meta[property="og:image"]`).Attr("content")
+
+	if !imageFound {
+		image = fmt.Sprintf("https://www.progarchives.com/progressive_rock_discography_band/%d.jpg", id)
+	}
 
 	bioStart := doc.Find("strong").Eq(1)
 	bioContainer := bioStart.Parent()
@@ -63,16 +71,24 @@ func artist(id int) (string, string, error) {
 
 	discography := strings.Builder{}
 	doc.Find("#discography").NextUntil("table").Next().Find("td").Each(func(i int, s *goquery.Selection) {
-		title := s.Find("a > strong").Text()
-		year := s.Find("a + br + span").Text()
-		discography.WriteString("\n  - [[")
-		discography.WriteString(removeNonUtf8(title))
-		discography.WriteString("]] ([[")
-		discography.WriteString(removeNonUtf8(year))
-		discography.WriteString("]])")
+		albumTitle := s.Find("a > strong").Text()
+		albumYear := s.Find("a + br + span").Text()
+
+		discography.WriteString(fmt.Sprintf(`
+  - [[%s (album)]] ([[%s]])
+`, albumTitle, albumYear))
 	})
 
-	return title, fmt.Sprintf("# %s\n\n[[%s]], [[%s]]\n\n![](%s)\n\n%s\n\n## Discography\n%s",
+	return title, fmt.Sprintf(`= %s
+
+[[%s]], [[%s]]
+
+image::%s[]
+
+%s
+
+== Discography
+%s`,
 		title, category, country, image, bioText.String(), discography.String(),
 	), nil
 }

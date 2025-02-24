@@ -2,41 +2,48 @@ package main
 
 import (
 	"fmt"
-	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
+	"golang.org/x/net/html/charset"
 )
 
 func album(id int) (string, string, error) {
-	req, err := http.NewRequest("GET", "https://www.progarchives.com/album.asp?"+url.Values{"id": {strconv.Itoa(id)}}.Encode(), nil)
+	params := url.Values{"id": {strconv.Itoa(id)}}
+	requestUrl := "https://www.progarchives.com/album.asp?" + params.Encode()
+
+	fmt.Println("Fetching album from ", requestUrl)
+
+	r, err := makeRequest(requestUrl)
 	if err != nil {
 		return "", "", err
 	}
 
-	req.Header.Add("user-agent", "Chrome")
-	req.Header.Add("accept", "text/html")
-	r, err := http.DefaultClient.Do(req)
+	ct := r.Header.Get("Content-Type")
+	bodyReader, err := charset.NewReader(r.Body, ct)
 	if err != nil {
 		return "", "", err
 	}
 
-	doc, err := goquery.NewDocumentFromReader(r.Body)
+	doc, err := goquery.NewDocumentFromReader(bodyReader)
 	if err != nil {
 		return "", "", err
 	}
 	r.Body.Close()
 
-	title := removeNonUtf8(doc.Find(`h1`).Text())
-	if title == "" {
-		return "", "", fmt.Errorf("title error")
+	title, err := getTitle(doc)
+	if err != nil {
+		return "", "", err
 	}
 
-	artist := removeNonUtf8(doc.Find(`h2`).Eq(0).Text())
+	title = title + " (album)"
+
+	artist := doc.Find(`h2`).Eq(0).Text()
 
 	image, _ := doc.Find(`#imgCover`).Attr("src")
+	imageUrl := "https://www.progarchives.com/" + image
 
 	textContainer := doc.Find(`td`).Eq(1)
 
@@ -45,7 +52,13 @@ func album(id int) (string, string, error) {
 		nodeToString(&text, node)
 	}
 
-	return title, fmt.Sprintf("# %s\n\nalbum from [[%s]]\n\n![](%s)\n\n%s",
-		title, artist, image, text.String(),
+	return title, fmt.Sprintf(`= %s
+
+album from [[%s]]
+
+image::%s[]
+
+%s`,
+		title, artist, imageUrl, text.String(),
 	), nil
 }
