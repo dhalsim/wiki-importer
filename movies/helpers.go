@@ -1,6 +1,9 @@
 package movies
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 func splitAndWikilink(s string) string {
 	if s != "" {
@@ -11,4 +14,13 @@ func splitAndWikilink(s string) string {
 		return strings.Join(spl, ", ")
 	}
 	return ""
+}
+
+func getYesterdays(format string) string {
+	return fmt.Sprintf(
+		format,
+		yesterday.Month(),
+		yesterday.Day(),
+		yesterday.Year(),
+	)
 }

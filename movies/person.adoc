@@ -1,0 +1,43 @@
+{{.Name}}{{if and .OriginalName (ne .Name .OriginalName)}} (original {{.OriginalName}}){{end}}{{if .AlsoKnownAs}} (also known as {{index .AlsoKnownAs 0}}){{end}}
+
+{{if .ProfilePath}}
+image::https://media.themoviedb.org/t/p/w300_and_h450_bestv2{{.ProfilePath}}[profile]
+{{end}}
+
+{{if .Biography}}
+== Biography
+
+{{.Biography}}
+{{end}}
+
+== Personal Information
+
+{{if .Birthday}}
+Born:: {{.Birthday}}{{if .PlaceOfBirth}} in {{.PlaceOfBirth}}{{end}}
+{{end}}
+
+{{if .Deathday}}
+Died:: {{.Deathday}}
+{{end}}
+
+{{if .KnownForDepartment}}
+Known for:: {{.KnownForDepartment}}
+{{end}}
+
+{{if .KnownFor}}
+Notable works::
+{{range .KnownFor}}- [[{{.Title}}]]
+{{end}}
+{{end}}
+
+{{if .Homepage}}
+Homepage:: {{.Homepage}}
+{{end}}
+
+{{if .ImdbID}}
+IMDB:: https://www.imdb.com/name/{{.ImdbID}}
+{{end}}
+
+{{if .Popularity}}
+Popularity:: {{.Popularity}}
+{{end}}

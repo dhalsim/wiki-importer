@@ -57,21 +57,34 @@ type TMDBMovie struct {
 	} `json:"cast"`
 }
 
+type TMDBPersonApiResult struct {
+	Page         int `json:"page"`
+	TotalResults int `json:"total_results"`
+	TotalPages   int `json:"total_pages"`
+	Results      []TMDBPerson
+}
+
+type KnownFor struct {
+	Title string `json:"title,omitempty"`
+}
+
 type TMDBPerson struct {
-	Adult              bool     `json:"adult"`
-	AlsoKnownAs        []string `json:"also_known_as"`
-	Biography          string   `json:"biography"`
-	Birthday           string   `json:"birthday"`
-	Deathday           any      `json:"deathday"`
-	Gender             int      `json:"gender"`
-	Homepage           any      `json:"homepage"`
-	ID                 int      `json:"id"`
-	ImdbID             string   `json:"imdb_id"`
-	KnownForDepartment string   `json:"known_for_department"`
-	Name               string   `json:"name"`
-	PlaceOfBirth       string   `json:"place_of_birth"`
-	Popularity         float64  `json:"popularity"`
-	ProfilePath        string   `json:"profile_path"`
+	Adult              bool       `json:"adult"`
+	AlsoKnownAs        []string   `json:"also_known_as"`
+	Biography          string     `json:"biography"`
+	Birthday           string     `json:"birthday"`
+	Deathday           any        `json:"deathday"`
+	Gender             int        `json:"gender"`
+	Homepage           any        `json:"homepage"`
+	ID                 int        `json:"id"`
+	ImdbID             string     `json:"imdb_id"`
+	KnownForDepartment string     `json:"known_for_department"`
+	Name               string     `json:"name"`
+	OriginalName       string     `json:"original_name"`
+	PlaceOfBirth       string     `json:"place_of_birth"`
+	Popularity         float64    `json:"popularity"`
+	ProfilePath        string     `json:"profile_path"`
+	KnownFor           []KnownFor `json:"known_for"`
 }
 
 type OMDBMovie struct {
