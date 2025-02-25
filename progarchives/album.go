@@ -1,4 +1,4 @@
-package main
+package progarchives
 
 import (
 	"fmt"
@@ -10,8 +10,8 @@ import (
 	"golang.org/x/net/html/charset"
 )
 
-func album(id int) (string, string, error) {
-	params := url.Values{"id": {strconv.Itoa(id)}}
+func album(id uint64) (string, string, error) {
+	params := url.Values{"id": {strconv.FormatUint(id, 10)}}
 	requestUrl := "https://www.progarchives.com/album.asp?" + params.Encode()
 
 	logger.Printf("Fetching album from %s\n", requestUrl)

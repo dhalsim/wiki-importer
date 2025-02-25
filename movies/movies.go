@@ -1,4 +1,4 @@
-package main
+package movies
 
 import (
 	"bufio"
@@ -14,7 +14,9 @@ import (
 	"github.com/nbd-wtf/go-nostr/nip54"
 )
 
-func movies() {
+func movies(ctx context.Context, start uint64) {
+	pool = nostr.NewSimplePool(ctx)
+
 	resp, err := http.Get(now.Format(TMDB_MOVIES))
 	if err != nil {
 		panic(err)
@@ -27,46 +29,81 @@ func movies() {
 	}
 	defer gr.Close()
 
+	i := uint64(0)
 	scanner := bufio.NewScanner(gr)
 	for scanner.Scan() {
+		if i < start {
+			i++
+			continue
+		}
+
 		// TMDB
-		imdbId, normalizedIdentifier, err := tmdb(scanner.Bytes())
+		tmdbResult, err := tmdb(ctx, i, scanner.Bytes())
 		if err != nil {
 			logger.Printf("Error processing TMDB movie: %v\n", err)
 			continue
 		} else {
-			logger.Printf("Processed TMDB movie: %s, IMDBId: %s\n", normalizedIdentifier, imdbId)
+			logger.Printf(
+				"Processed TMDB movie - ID: %d, %s, IMDBId: %s, index: %d\n",
+				tmdbResult.TMDBId,
+				tmdbResult.NormalizedIdentifier,
+				tmdbResult.IMDBId,
+				i,
+			)
 		}
 
-		// OMDB (use the imdb id to query this same movie)
-		if err := omdb(imdbId, normalizedIdentifier); err != nil {
+		// OMDB (use the imdb id to query this same movie also the same normalized identifier)
+		if err := omdb(ctx, tmdbResult.IMDBId, tmdbResult.NormalizedIdentifier); err != nil {
 			logger.Printf("Error processing OMDB movie: %v\n", err)
 			continue
 		} else {
-			logger.Printf("Processed OMDB movie: %s, IMDBId: %s\n", normalizedIdentifier, imdbId)
+			logger.Printf(
+				"Processed OMDB movie: %s, IMDBId: %s, index: %d\n",
+				tmdbResult.NormalizedIdentifier,
+				tmdbResult.IMDBId,
+				i,
+			)
 		}
+
+		i++
 	}
 }
 
-func tmdb(line []byte) (string, string, error) {
+type TMDBResult struct {
+	TMDBId               int
+	IMDBId               string
+	NormalizedIdentifier string
+}
+
+func tmdb(ctx context.Context, index uint64, line []byte) (TMDBResult, error) {
+	var empty = TMDBResult{}
+
 	var movie TMDBMovie
 	if err := json.Unmarshal(line, &movie); err != nil {
-		return "", "", fmt.Errorf("unmarshal TMDB movie: %w", err)
+		return empty, fmt.Errorf("unmarshal TMDB movie: %w", err)
 	}
 
 	{
-		logger.Printf("Processing TMDB movie: %d, IMDBId: %s\n", movie.ID, movie.ImdbID)
+		logger.Printf("Processing TMDB movie - ID: %d, index: %d\n", movie.ID, index)
 
 		// basic movie data
-		resp, err := http.Get(fmt.Sprintf("https://api.themoviedb.org/3/movie/%d?api_key=%s", movie.ID, tmdbApiKey))
+		resp, err := http.Get(
+			fmt.Sprintf(
+				"https://api.themoviedb.org/3/movie/%d?api_key=%s",
+				movie.ID,
+				tmdbApiKey,
+			),
+		)
+
 		if err != nil {
-			return "", "", fmt.Errorf("fetch TMDB movie details: %w", err)
+			return empty, fmt.Errorf("fetch TMDB movie details: %w", err)
 		}
 		if err := json.NewDecoder(resp.Body).Decode(&movie); err != nil {
 			resp.Body.Close()
-			return "", "", fmt.Errorf("decode TMDB movie details: %w", err)
+			return empty, fmt.Errorf("decode TMDB movie details: %w", err)
 		}
 		resp.Body.Close()
+
 		if spl := strings.Split(movie.ReleaseDate, "-"); len(spl) == 3 {
 			movie.ReleaseDate = spl[0]
 		}
@@ -74,13 +111,21 @@ func tmdb(line []byte) (string, string, error) {
 
 	{
 		// cast
-		resp, err := http.Get(fmt.Sprintf("https://api.themoviedb.org/3/movie/%d/credits?api_key=%s", movie.ID, tmdbApiKey))
+		resp, err := http.Get(
+			fmt.Sprintf(
+				"https://api.themoviedb.org/3/movie/%d/credits?api_key=%s",
+				movie.ID,
+				tmdbApiKey,
+			),
+		)
+
 		if err != nil {
-			return "", "", fmt.Errorf("fetch TMDB movie credits: %w", err)
+			return empty, fmt.Errorf("fetch TMDB movie credits: %w", err)
 		}
+
 		if err := json.NewDecoder(resp.Body).Decode(&movie); err != nil {
 			resp.Body.Close()
-			return "", "", fmt.Errorf("decode TMDB movie credits: %w", err)
+			return empty, fmt.Errorf("decode TMDB movie credits: %w", err)
 		}
 		resp.Body.Close()
 
@@ -91,7 +136,7 @@ func tmdb(line []byte) (string, string, error) {
 
 	content := &bytes.Buffer{}
 	if err := tmdbParsed.Execute(content, movie); err != nil {
-		return "", "", fmt.Errorf("execute TMDB template: %w", err)
+		return empty, fmt.Errorf("execute TMDB template: %w", err)
 	}
 
 	normalizedIdentifier := nip54.NormalizeIdentifier(movie.Title)
@@ -110,17 +155,21 @@ func tmdb(line []byte) (string, string, error) {
 
 	relay, err := pool.EnsureRelay(tmdbRelay)
 	if err != nil {
-		return "", "", fmt.Errorf("ensure TMDB relay: %w", err)
+		return empty, fmt.Errorf("ensure TMDB relay: %w", err)
 	}
 
-	if err := relay.Publish(context.Background(), evt); err != nil {
-		return "", "", fmt.Errorf("publish to TMDB relay: %w", err)
+	if err := relay.Publish(ctx, evt); err != nil {
+		return empty, fmt.Errorf("publish to TMDB relay: %w", err)
 	}
 
-	return movie.ImdbID, normalizedIdentifier, nil
+	return TMDBResult{
+		TMDBId:               movie.ID,
+		IMDBId:               movie.ImdbID,
+		NormalizedIdentifier: normalizedIdentifier,
+	}, nil
 }
 
-func omdb(imdbId string, normalizedIdentifier string) error {
+func omdb(ctx context.Context, imdbId string, normalizedIdentifier string) error {
 	var movie OMDBMovie
 
 	resp, err := http.Get(fmt.Sprintf("https://www.omdbapi.com/?i=%s&plot=full&apikey=%s", imdbId, omdbApiKey))
@@ -162,7 +211,7 @@ func omdb(imdbId string, normalizedIdentifier string) error {
 		return fmt.Errorf("ensure OMDB relay: %w", err)
 	}
 
-	if err := relay.Publish(context.Background(), evt); err != nil {
+	if err := relay.Publish(ctx, evt); err != nil {
 		return fmt.Errorf("publish to OMDB relay: %w", err)
 	}
 

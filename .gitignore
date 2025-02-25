@@ -2,8 +2,7 @@
 .vscode
 
 # generated files on build
-progarchives/progarchives
-movies/movies
+wiki-importer
 
 # logs
-movies/movies-errors.log
+logs/

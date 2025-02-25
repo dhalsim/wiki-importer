@@ -1,15 +1,17 @@
-package main
+package movies
 
 import (
 	"bufio"
 	"compress/gzip"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
 )
 
-func persons() {
+// TODO: Finish persons
+func persons(ctx context.Context, start uint64) {
 	now := time.Now()
 	resp, err := http.Get(now.Format(TMDB_PERSONS))
 	if err != nil {
@@ -23,8 +25,14 @@ func persons() {
 	}
 	defer gr.Close()
 
+	i := uint64(0)
 	scanner := bufio.NewScanner(gr)
 	for scanner.Scan() {
+		if i < start {
+			i++
+			continue
+		}
+
 		var person TMDBPerson
 		if err := json.Unmarshal(scanner.Bytes(), &person); err != nil {
 			panic(err)
@@ -38,5 +46,7 @@ func persons() {
 			panic(err)
 		}
 		resp.Body.Close()
+
+		i++
 	}
 }

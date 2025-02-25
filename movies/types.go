@@ -1,4 +1,4 @@
-package main
+package movies
 
 type TMDBMovie struct {
 	Adult               bool   `json:"adult"`

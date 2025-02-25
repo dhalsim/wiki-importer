@@ -1,4 +1,4 @@
-package main
+package progarchives
 
 import (
 	"fmt"
@@ -10,8 +10,8 @@ import (
 	"golang.org/x/net/html/charset"
 )
 
-func artist(id int) (string, string, error) {
-	params := url.Values{"id": {strconv.Itoa(id)}}
+func artist(id uint64) (string, string, error) {
+	params := url.Values{"id": {strconv.FormatUint(id, 10)}}
 	requestUrl := "https://www.progarchives.com/artist.asp?" + params.Encode()
 
 	logger.Printf("Fetching artist from %s\n", requestUrl)
@@ -77,7 +77,7 @@ func artist(id int) (string, string, error) {
 		albumYear := s.Find("a + br + span").Text()
 
 		discography.WriteString(fmt.Sprintf(`
-  - [[%s (album)]] ([[%s]])
+- [[%s (album)]] ([[%s]])
 `, albumTitle, albumYear))
 	})
 
@@ -88,6 +88,7 @@ image::%s[]
 %s
 
 == Discography
+
 %s`,
 		category, country, image, bioText.String(), discography.String(),
 	), nil

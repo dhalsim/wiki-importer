@@ -1,16 +1,16 @@
-package main
+package movies
 
 import (
 	"context"
 	"embed"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"text/template"
 	"time"
 
 	"github.com/nbd-wtf/go-nostr"
+	"github.com/urfave/cli/v3"
 )
 
 const (
@@ -40,24 +40,21 @@ var (
 	logger *log.Logger
 )
 
-func main() {
-	if err := run(); err != nil {
-		panic(err)
-	}
+func HandleMovies(ctx context.Context, l *log.Logger, c *cli.Command) error {
+	startIndex := c.Uint("continue")
+	logger = l
+
+	return runMovies(ctx, startIndex)
 }
 
-func run() error {
-	// Open log file with append mode, create if doesn't exist
-	logFile, err := os.OpenFile("movies-errors.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		return fmt.Errorf("open log file: %w", err)
-	}
+func HandlePersons(ctx context.Context, l *log.Logger, c *cli.Command) error {
+	startIndex := c.Uint("continue")
+	logger = l
 
-	defer logFile.Close()
+	return runPersons(ctx, startIndex)
+}
 
-	// Create logger that writes to both file and stdout
-	logger = log.New(io.MultiWriter(os.Stdout, logFile), "", log.LstdFlags)
-
+func runMovies(ctx context.Context, startIndex uint64) error {
 	tmdbApiKey = os.Getenv("TMDB_API_KEY")
 	if tmdbApiKey == "" {
 		return fmt.Errorf("TMDB_API_KEY environment variable is required")
@@ -73,6 +70,7 @@ func run() error {
 		return fmt.Errorf("TMDB_RELAY environment variable is required")
 	}
 
+	var err error
 	tmdbParsed, err = template.ParseFS(templates, "tmdb.adoc")
 	if err != nil {
 		return fmt.Errorf("parse TMDB template: %w", err)
@@ -98,10 +96,13 @@ func run() error {
 		return fmt.Errorf("parse OMDB template: %w", err)
 	}
 
-	pool = nostr.NewSimplePool(context.Background())
+	movies(ctx, startIndex)
 
-	movies()
-	persons()
+	return nil
+}
+
+func runPersons(ctx context.Context, startIndex uint64) error {
+	persons(ctx, startIndex)
 
 	return nil
 }

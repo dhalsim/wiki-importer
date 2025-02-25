@@ -1,4 +1,4 @@
-package main
+package progarchives
 
 import (
 	"crypto/tls"

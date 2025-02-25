@@ -7,6 +7,7 @@ toolchain go1.24.0
 require (
 	github.com/PuerkitoBio/goquery v1.9.1
 	github.com/nbd-wtf/go-nostr v0.50.0
+	github.com/urfave/cli/v3 v3.0.0-beta1
 	golang.org/x/net v0.34.0
 )
 

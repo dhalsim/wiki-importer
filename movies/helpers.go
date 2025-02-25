@@ -1,4 +1,4 @@
-package main
+package movies
 
 import "strings"
 
