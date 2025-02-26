@@ -6,9 +6,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"net/http"
 	"strings"
 	"text/template"
+
+	"fiatjaf/wiki-importer/common"
 
 	"github.com/nbd-wtf/go-nostr"
 	"github.com/nbd-wtf/go-nostr/nip54"
@@ -74,7 +75,7 @@ func tmdb(ctx context.Context, params TmdbParams) (TMDBResult, error) {
 		logger.Printf("Processing TMDB movie - ID: %d, index: %d\n", movie.ID, index)
 
 		// basic movie data
-		resp, err := http.Get(
+		resp, err := common.HttpGet(
 			fmt.Sprintf(
 				"https://api.themoviedb.org/3/movie/%d?api_key=%s",
 				movie.ID,
@@ -98,7 +99,7 @@ func tmdb(ctx context.Context, params TmdbParams) (TMDBResult, error) {
 
 	{
 		// cast
-		resp, err := http.Get(
+		resp, err := common.HttpGet(
 			fmt.Sprintf(
 				"https://api.themoviedb.org/3/movie/%d/credits?api_key=%s",
 				movie.ID,

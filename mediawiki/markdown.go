@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"net/url"
 	"os/exec"
 	"strings"
+
+	"fiatjaf/wiki-importer/common"
 )
 
 type PageResult struct {
@@ -27,7 +28,7 @@ func markdown(host string, page string) (string, string, error) {
 		"page":   {page},
 	}
 
-	r, err := http.Get(apiBase(host) + "?" + qs.Encode())
+	r, err := common.HttpGet(apiBase(host) + "?" + qs.Encode())
 	if err != nil {
 		return "", "", err
 	}

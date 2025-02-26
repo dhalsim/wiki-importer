@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"fiatjaf/wiki-importer/common"
+
 	"github.com/PuerkitoBio/goquery"
 	"github.com/nbd-wtf/go-nostr"
 	"github.com/nbd-wtf/go-nostr/nip54"
@@ -39,7 +41,7 @@ func doPage(num int) bool {
 	var resp *http.Response
 	var err error
 	for {
-		resp, err = http.Get(fmt.Sprintf("https://www.behindthename.com/names/%d", num))
+		resp, err = common.HttpGet(fmt.Sprintf("https://www.behindthename.com/names/%d", num))
 		if err != nil {
 			fmt.Println("error page", num, err, "trying again")
 			time.Sleep(time.Minute * 5)
@@ -73,7 +75,7 @@ func doName(url string, name string) {
 	var resp *http.Response
 	var err error
 	for {
-		resp, err = http.Get(url)
+		resp, err = common.HttpGet(url)
 		if err != nil {
 			fmt.Println("error", url, err, "trying again")
 			time.Sleep(5 * time.Minute)

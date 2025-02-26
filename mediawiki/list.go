@@ -2,9 +2,10 @@ package main
 
 import (
 	"encoding/json"
-	"net/http"
 	"net/url"
 	"os"
+
+	"fiatjaf/wiki-importer/common"
 )
 
 type ListResult struct {
@@ -35,7 +36,7 @@ func list(host string) chan string {
 				qs.Set("apcontinue", apcontinue)
 			}
 
-			r, err := http.Get(apiBase(host) + "?" + qs.Encode())
+			r, err := common.HttpGet(apiBase(host) + "?" + qs.Encode())
 			if err != nil {
 				panic(err)
 			}

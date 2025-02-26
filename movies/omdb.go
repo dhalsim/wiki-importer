@@ -6,8 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"net/http"
 	"text/template"
+
+	"fiatjaf/wiki-importer/common"
 
 	"github.com/nbd-wtf/go-nostr"
 )
@@ -59,7 +60,7 @@ func omdb(ctx context.Context, params OmdbParams) error {
 	logger := params.Logger
 	omdbParsed := params.OmdbParsed
 
-	resp, err := http.Get(fmt.Sprintf("https://www.omdbapi.com/?i=%s&plot=full&apikey=%s", imdbId, omdbApiKey))
+	resp, err := common.HttpGet(fmt.Sprintf("https://www.omdbapi.com/?i=%s&plot=full&apikey=%s", imdbId, omdbApiKey))
 	if err != nil {
 		return fmt.Errorf("error fetching OMDB movie - index: %d, %w", index, err)
 	}

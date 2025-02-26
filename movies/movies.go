@@ -5,8 +5,9 @@ import (
 	"compress/gzip"
 	"context"
 	"log"
-	"net/http"
 	"text/template"
+
+	"fiatjaf/wiki-importer/common"
 
 	"github.com/nbd-wtf/go-nostr"
 )
@@ -38,7 +39,7 @@ func movies(ctx context.Context, params MoviesParams) {
 	logger := params.Logger
 	tmdbParsed := params.TmdbParsed
 
-	resp, err := http.Get(getYesterdays(TMDB_MOVIES))
+	resp, err := common.HttpGet(getYesterdays(TMDB_MOVIES))
 	if err != nil {
 		panic(err)
 	}
