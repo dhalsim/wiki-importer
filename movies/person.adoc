@@ -1,43 +1,47 @@
-{{.Name}}{{if and .OriginalName (ne .Name .OriginalName)}} (original {{.OriginalName}}){{end}}{{if .AlsoKnownAs}} (also known as {{index .AlsoKnownAs 0}}){{end}}
+{{- .Name -}}
+{{- if and .OriginalName (ne .Name .OriginalName)}} (original {{.OriginalName}}){{end -}}
+{{- if .AlsoKnownAs}} (also known as {{index .AlsoKnownAs 0}}){{end}}
 
-{{if .ProfilePath}}
+{{- if .ProfilePath}}
+
 image::https://media.themoviedb.org/t/p/w300_and_h450_bestv2{{.ProfilePath}}[profile]
-{{end}}
+{{- end}}
 
-{{if .Biography}}
+{{- if .Biography}}
 == Biography
 
 {{.Biography}}
-{{end}}
+{{- end}}
 
 == Personal Information
 
-{{if .Birthday}}
-Born:: {{.Birthday}}{{if .PlaceOfBirth}} in {{.PlaceOfBirth}}{{end}}
-{{end}}
+{{- if .Birthday}}
+Born:: {{.Birthday}}{{- if .PlaceOfBirth}} in {{.PlaceOfBirth}}{{end}}
+{{- end}}
 
-{{if .Deathday}}
+{{- if .Deathday}}
 Died:: {{.Deathday}}
-{{end}}
+{{- end}}
 
-{{if .KnownForDepartment}}
+{{- if .KnownForDepartment}}
 Known for:: {{.KnownForDepartment}}
-{{end}}
+{{- end}}
 
-{{if .KnownFor}}
+{{- if .KnownFor}}
 Notable works::
-{{range .KnownFor}}- [[{{.Title}}]]
-{{end}}
-{{end}}
+{{- range .KnownFor}}
+- [[{{.Title}}]]
+{{- end}}
+{{- end}}
 
-{{if .Homepage}}
+{{- if .Homepage}}
 Homepage:: {{.Homepage}}
-{{end}}
+{{- end}}
 
-{{if .ImdbID}}
+{{- if .ImdbID}}
 IMDB:: https://www.imdb.com/name/{{.ImdbID}}
-{{end}}
+{{- end}}
 
-{{if .Popularity}}
+{{- if .Popularity}}
 Popularity:: {{.Popularity}}
-{{end}}
+{{- end}}
