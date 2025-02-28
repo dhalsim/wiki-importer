@@ -61,48 +61,80 @@ end
 -- Main filter function for DefinitionList elements
 -- Converts MediaWiki's :: syntax to AsciiDoc format while preserving wikilinks
 function DefinitionList(el)
-  -- Extract the first definition's content from the nested structure:
-  -- el.content[1] -> first item
-  -- [2] -> definitions part (array)
-  -- [1] -> first definition
-  -- [1] -> first block in definition
-  if el.content and el.content[1] and el.content[1][2] and el.content[1][2][1] and el.content[1][2][1][1] then
-    local plain = el.content[1][2][1][1]
-    
-    -- Only process Plain blocks (not other block types)
-    if plain.t == "Plain" then
-      -- Skip if already processed (contains RawInline)
-      if #plain.content == 1 and plain.content[1].t == "RawInline" then
-        return plain
-      end
+  io.stderr:write("\n=== DefinitionList Debug ===\n")
+  io.stderr:write("Full element: " .. dump(el) .. "\n")
+
+  -- Create an array to hold all processed items
+  local result = {}
+  
+  -- Process each item in the definition list
+  for _, item in ipairs(el.content) do
+    -- Process all definitions in this item
+    if item[2] then
+      -- Check if this is a first pass or second pass structure
+      local def = item[2][1]
+      io.stderr:write("\nChecking def structure:\n")
+      io.stderr:write("def type: " .. type(def) .. "\n")
+      io.stderr:write("def content: " .. dump(def) .. "\n")
       
-      -- Process each inline element and build the content string
-      local content = ""
-      for _, inline in ipairs(plain.content) do
-        if inline.t == "Str" then
-          -- Regular text
-          content = content .. inline.text
-        elseif inline.t == "Space" then
-          -- Space between elements
-          content = content .. " "
-        elseif inline.t == "Link" then
-          -- Handle links: preserve wikilinks, convert others to text
-          if inline.attr and inline.attr.classes and inline.attr.classes[1] == "wikilink" then
-            content = content .. "[[" .. pandoc.utils.stringify(inline.content) .. "]]"
-          else
-            content = content .. pandoc.utils.stringify(inline.content)
+      -- Check if this is a first pass (def[1] is a Plain block)
+      local is_first_pass = def[1] and def[1].t == "Plain"
+      io.stderr:write("Is first pass: " .. tostring(is_first_pass) .. "\n")
+      
+      if is_first_pass then
+        -- First pass: Process each definition
+        for _, d in ipairs(item[2]) do
+          local plain = d[1]
+          if plain.t == "Plain" then
+            -- Skip if already processed
+            if #plain.content == 1 and plain.content[1].t == "RawInline" then
+              table.insert(result, plain)
+            else
+              -- Process inline elements
+              local content = ""
+              for _, inline in ipairs(plain.content) do
+                if inline.t == "Str" then
+                  content = content .. inline.text
+                elseif inline.t == "Space" then
+                  content = content .. " "
+                elseif inline.t == "Link" then
+                  if inline.attr and inline.attr.classes and inline.attr.classes[1] == "wikilink" then
+                    content = content .. "[[" .. pandoc.utils.stringify(inline.content) .. "]]"
+                  else
+                    content = content .. pandoc.utils.stringify(inline.content)
+                  end
+                end
+              end
+              
+              -- Create a RawBlock with newline
+              table.insert(result, pandoc.RawBlock("asciidoc", ":: " .. content .. "\n"))
+            end
+          end
+        end
+      else
+        -- Second pass: All RawBlocks are in the first definition
+        io.stderr:write("\nSecond pass processing:\n")
+        io.stderr:write("Number of items in def: " .. #def .. "\n")
+        for i = 1, #def do
+          local block = def[i]
+          io.stderr:write("Processing item " .. i .. ": " .. dump(block) .. "\n")
+          if block.t == "RawBlock" then
+            io.stderr:write("Adding RawBlock to result\n")
+            -- Add newline if it's not already there
+            if not block.text:match("\n$") then
+              block.text = block.text .. "\n"
+            end
+            table.insert(result, block)
           end
         end
       end
-      
-      -- Create a Plain block containing a RawInline with AsciiDoc format
-      return pandoc.Plain({
-        pandoc.RawInline("asciidoc", ":: " .. content)
-      })
     end
   end
   
-  -- Return nil if we can't process this element
-  -- (tells pandoc to leave it unchanged)
-  return nil
+  io.stderr:write("\nFinal result: " .. dump(result) .. "\n")
+  -- Remove the last newline to match the expected output exactly
+  if #result > 0 then
+    result[#result].text = result[#result].text:gsub("\n$", "")
+  end
+  return result  -- Return array of RawBlocks
 end
