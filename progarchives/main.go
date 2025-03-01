@@ -2,10 +2,10 @@ package progarchives
 
 import (
 	"context"
-	"fmt"
 	"log"
-	"os"
 	"time"
+
+	"fiatjaf/wiki-importer/common"
 
 	"github.com/nbd-wtf/go-nostr"
 	"github.com/nbd-wtf/go-nostr/nip54"
@@ -21,15 +21,15 @@ type CommonConfig struct {
 	RelayURL string            // Nostr relay URL
 }
 
-func common(ctx context.Context) (*CommonConfig, error) {
-	relayURL := os.Getenv("RELAY")
-	if relayURL == "" {
-		return nil, fmt.Errorf("RELAY environment variable is required")
+func getCommonConfig(ctx context.Context) (*CommonConfig, error) {
+	relayURL, err := common.GetRequiredEnv("RELAY")
+	if err != nil {
+		return nil, err
 	}
 
-	nostrKey := os.Getenv("NOSTR_KEY")
-	if nostrKey == "" {
-		return nil, fmt.Errorf("NOSTR_KEY environment variable is required")
+	nostrKey, err := common.GetRequiredEnv("NOSTR_KEY")
+	if err != nil {
+		return nil, err
 	}
 
 	pool := nostr.NewSimplePool(ctx)
@@ -52,7 +52,7 @@ type RunParams struct {
 }
 
 func run(ctx context.Context, params *RunParams) error {
-	cfg, err := common(ctx)
+	cfg, err := getCommonConfig(ctx)
 	if err != nil {
 		return err
 	}

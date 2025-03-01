@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 
+	"fiatjaf/wiki-importer/mediawiki"
 	"fiatjaf/wiki-importer/movies"
 	"fiatjaf/wiki-importer/progarchives"
 
@@ -65,6 +66,25 @@ func main() {
 					},
 				},
 			},
+			{
+				Name:  "mediawiki",
+				Usage: "Import data from MediaWiki supported sites",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:    "host",
+						Aliases: []string{"ho"},
+						Usage:   "Host to import from",
+						Value:   "en.wikipedia.org",
+					},
+					&cli.StringFlag{
+						Name:    "continue",
+						Aliases: []string{"c"},
+						Usage:   "Continue from specific page",
+						Value:   "",
+					},
+				},
+				Action: handleMediaWiki,
+			},
 		},
 	}
 
@@ -95,7 +115,11 @@ func handleProgArchivesAlbums(ctx context.Context, c *cli.Command) error {
 		return fmt.Errorf("create logger: %w", err)
 	}
 
-	return progarchives.HandleAlbums(ctx, logger, c)
+	if err := progarchives.HandleAlbums(ctx, logger, c); err != nil {
+		return fmt.Errorf("handle albums: %w", err)
+	}
+
+	return nil
 }
 
 func handleProgArchivesArtists(ctx context.Context, c *cli.Command) error {
@@ -104,7 +128,11 @@ func handleProgArchivesArtists(ctx context.Context, c *cli.Command) error {
 		return fmt.Errorf("create logger: %w", err)
 	}
 
-	return progarchives.HandleArtists(ctx, logger, c)
+	if err := progarchives.HandleArtists(ctx, logger, c); err != nil {
+		return fmt.Errorf("handle artists: %w", err)
+	}
+
+	return nil
 }
 
 func handleMovies(ctx context.Context, c *cli.Command) error {
@@ -113,7 +141,11 @@ func handleMovies(ctx context.Context, c *cli.Command) error {
 		return fmt.Errorf("create logger: %w", err)
 	}
 
-	return movies.HandleMovies(ctx, logger, c)
+	if err := movies.HandleMovies(ctx, logger, c); err != nil {
+		return fmt.Errorf("handle movies: %w", err)
+	}
+
+	return nil
 }
 
 func handlePersons(ctx context.Context, c *cli.Command) error {
@@ -122,5 +154,22 @@ func handlePersons(ctx context.Context, c *cli.Command) error {
 		return fmt.Errorf("create logger: %w", err)
 	}
 
-	return movies.HandlePersons(ctx, logger, c)
+	if err := movies.HandlePersons(ctx, logger, c); err != nil {
+		return fmt.Errorf("handle persons: %w", err)
+	}
+
+	return nil
+}
+
+func handleMediaWiki(ctx context.Context, c *cli.Command) error {
+	logger, err := createLogger("mediawiki")
+	if err != nil {
+		return fmt.Errorf("create logger: %w", err)
+	}
+
+	if err := mediawiki.HandleMediaWiki(ctx, logger, c); err != nil {
+		return fmt.Errorf("handle mediawiki: %w", err)
+	}
+
+	return nil
 }

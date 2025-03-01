@@ -1,9 +1,8 @@
-package main
+package mediawiki
 
 import (
 	"encoding/json"
 	"net/url"
-	"os"
 
 	"fiatjaf/wiki-importer/common"
 )
@@ -20,11 +19,14 @@ type ListResult struct {
 	} `json:"query"`
 }
 
-func list(host string) chan string {
+func getListChannel(host string, apcontinue string) (chan string, error) {
 	ch := make(chan string)
+	errCh := make(chan error, 1) // buffered channel for errors
 
-	apcontinue := os.Getenv("CONTINUE")
 	go func() {
+		defer close(ch)
+		defer close(errCh)
+
 		for {
 			qs := url.Values{
 				"action": {"query"},
@@ -38,13 +40,17 @@ func list(host string) chan string {
 
 			r, err := common.HttpGet(apiBase(host) + "?" + qs.Encode())
 			if err != nil {
-				panic(err)
+				errCh <- err
+
+				return
 			}
 
 			var res ListResult
 			if err := json.NewDecoder(r.Body).Decode(&res); err != nil {
 				r.Body.Close()
-				panic(err)
+				errCh <- err
+
+				return
 			}
 			r.Body.Close()
 
@@ -52,9 +58,22 @@ func list(host string) chan string {
 				ch <- page.Title
 			}
 
+			if res.Continue.ApContinue == "" {
+				// No more pages to fetch
+				return
+			}
+
 			apcontinue = res.Continue.ApContinue
 		}
 	}()
 
-	return ch
+	// Check for immediate errors
+	select {
+	case err := <-errCh:
+		close(ch)
+
+		return nil, err
+	default:
+		return ch, nil
+	}
 }

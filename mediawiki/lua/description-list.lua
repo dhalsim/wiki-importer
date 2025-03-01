@@ -53,8 +53,8 @@ function create_test_deflist()
   -- Create the definition list
   local deflist = pandoc.DefinitionList({item})
   
-  io.stderr:write("\n=== Test DefinitionList Structure ===\n")
-  io.stderr:write(dump(deflist) .. "\n")
+  -- io.stderr:write("\n=== Test DefinitionList Structure ===\n")
+  -- io.stderr:write(dump(deflist) .. "\n")
   return deflist
 end
 
@@ -91,23 +91,39 @@ function DefinitionList(el)
               table.insert(result, plain)
             else
               -- Process inline elements
-              local content = ""
+              local title = ""
+              local link = ""
+              
+              -- First collect all content before the link
               for _, inline in ipairs(plain.content) do
                 if inline.t == "Str" then
-                  content = content .. inline.text
-                elseif inline.t == "Space" then
-                  content = content .. " "
-                elseif inline.t == "Link" then
-                  if inline.attr and inline.attr.classes and inline.attr.classes[1] == "wikilink" then
-                    content = content .. "[[" .. pandoc.utils.stringify(inline.content) .. "]]"
+                  if inline.text:match(":$") then
+                    -- Remove the colon from the title
+                    title = title .. inline.text:gsub(":$", "")
                   else
-                    content = content .. pandoc.utils.stringify(inline.content)
+                    title = title .. inline.text
                   end
+                elseif inline.t == "Space" then
+                  title = title .. " "
+                elseif inline.t == "Link" then
+                  -- Once we hit the link, we're done with the title
+                  if inline.attr and inline.attr.classes and inline.attr.classes[1] == "wikilink" then
+                    link = "[[" .. pandoc.utils.stringify(inline.content) .. "]]"
+                  else
+                    link = pandoc.utils.stringify(inline.content)
+                  end
+                  break
                 end
               end
               
-              -- Create a RawBlock with newline
-              table.insert(result, pandoc.RawBlock("asciidoc", ":: " .. content .. "\n"))
+              -- Trim any extra spaces
+              title = title:gsub("^%s*(.-)%s*$", "%1")
+              
+              -- Create the AsciiDoc format: "Title:: Link"
+              local content = title .. ":: " .. link .. " \n\n"
+              
+              -- Create a RawBlock with newlines
+              table.insert(result, pandoc.RawBlock("asciidoc", content))
             end
           end
         end
@@ -118,13 +134,18 @@ function DefinitionList(el)
         for i = 1, #def do
           local block = def[i]
           io.stderr:write("Processing item " .. i .. ": " .. dump(block) .. "\n")
-          if block.t == "RawBlock" then
+          if block.t == "RawBlock" and not block.text:match("^%s*$") then
             io.stderr:write("Adding RawBlock to result\n")
-            -- Add newline if it's not already there
-            if not block.text:match("\n$") then
-              block.text = block.text .. "\n"
+            -- Convert from ":: Title: Link" to "Title:: Link" format if needed
+            local content = block.text
+            if content:match("^%s*::%s*") then
+              content = content:gsub("^%s*::%s*([^:]+):%s*(.+)%s*$", "%1:: %2")
             end
-            table.insert(result, block)
+            -- Add newlines after the content
+            if not content:match("\n\n$") then
+              content = content .. "\n\n"
+            end
+            table.insert(result, pandoc.RawBlock("asciidoc", content))
           end
         end
       end
@@ -132,9 +153,10 @@ function DefinitionList(el)
   end
   
   io.stderr:write("\nFinal result: " .. dump(result) .. "\n")
-  -- Remove the last newline to match the expected output exactly
-  if #result > 0 then
-    result[#result].text = result[#result].text:gsub("\n$", "")
-  end
-  return result  -- Return array of RawBlocks
+  
+  return result
 end
+
+return {
+  { DefinitionList = DefinitionList }
+}

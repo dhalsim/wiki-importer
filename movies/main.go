@@ -5,9 +5,10 @@ import (
 	"embed"
 	"fmt"
 	"log"
-	"os"
 	"text/template"
 	"time"
+
+	"fiatjaf/wiki-importer/common"
 
 	"github.com/nbd-wtf/go-nostr"
 	"github.com/urfave/cli/v3"
@@ -38,19 +39,19 @@ func HandlePersons(ctx context.Context, l *log.Logger, c *cli.Command) error {
 }
 
 func runMovies(ctx context.Context, l *log.Logger, startIndex uint64) error {
-	tmdbApiKey := os.Getenv("TMDB_API_KEY")
-	if tmdbApiKey == "" {
-		return fmt.Errorf("TMDB_API_KEY environment variable is required")
+	tmdbApiKey, err := common.GetRequiredEnv("TMDB_API_KEY")
+	if err != nil {
+		return err
 	}
 
-	tmdbNostrKey := os.Getenv("TMDB_NOSTR_KEY")
-	if tmdbNostrKey == "" {
-		return fmt.Errorf("TMDB_NOSTR_KEY environment variable is required")
+	tmdbNostrKey, err := common.GetRequiredEnv("TMDB_NOSTR_KEY")
+	if err != nil {
+		return err
 	}
 
-	tmdbRelay := os.Getenv("TMDB_RELAY")
-	if tmdbRelay == "" {
-		return fmt.Errorf("TMDB_RELAY environment variable is required")
+	tmdbRelay, err := common.GetRequiredEnv("TMDB_RELAY")
+	if err != nil {
+		return err
 	}
 
 	tmdbParsed, err := template.ParseFS(templates, "tmdb.adoc")
@@ -58,19 +59,19 @@ func runMovies(ctx context.Context, l *log.Logger, startIndex uint64) error {
 		return fmt.Errorf("parse TMDB template: %w", err)
 	}
 
-	omdbApiKey := os.Getenv("OMDB_API_KEY")
-	if omdbApiKey == "" {
-		return fmt.Errorf("OMDB_API_KEY environment variable is required")
+	omdbApiKey, err := common.GetRequiredEnv("OMDB_API_KEY")
+	if err != nil {
+		return err
 	}
 
-	omdbNostrKey := os.Getenv("OMDB_NOSTR_KEY")
-	if omdbNostrKey == "" {
-		return fmt.Errorf("OMDB_NOSTR_KEY environment variable is required")
+	omdbNostrKey, err := common.GetRequiredEnv("OMDB_NOSTR_KEY")
+	if err != nil {
+		return err
 	}
 
-	omdbRelay := os.Getenv("OMDB_RELAY")
-	if omdbRelay == "" {
-		return fmt.Errorf("OMDB_RELAY environment variable is required")
+	omdbRelay, err := common.GetRequiredEnv("OMDB_RELAY")
+	if err != nil {
+		return err
 	}
 
 	omdbParsed, err := template.ParseFS(templates, "omdb.adoc")
@@ -101,19 +102,19 @@ func runPersons(ctx context.Context, l *log.Logger, startIndex uint64) error {
 		return fmt.Errorf("parse person template: %w", err)
 	}
 
-	tmdbApiKey := os.Getenv("TMDB_API_KEY")
-	if tmdbApiKey == "" {
-		return fmt.Errorf("TMDB_API_KEY environment variable is required")
+	tmdbApiKey, err := common.GetRequiredEnv("TMDB_API_KEY")
+	if err != nil {
+		return err
 	}
 
-	tmdbNostrKey := os.Getenv("TMDB_NOSTR_KEY")
-	if tmdbNostrKey == "" {
-		return fmt.Errorf("TMDB_NOSTR_KEY environment variable is required")
+	tmdbNostrKey, err := common.GetRequiredEnv("TMDB_NOSTR_KEY")
+	if err != nil {
+		return err
 	}
 
-	tmdbRelay := os.Getenv("TMDB_RELAY")
-	if tmdbRelay == "" {
-		return fmt.Errorf("TMDB_RELAY environment variable is required")
+	tmdbRelay, err := common.GetRequiredEnv("TMDB_RELAY")
+	if err != nil {
+		return err
 	}
 
 	pool := nostr.NewSimplePool(ctx)
