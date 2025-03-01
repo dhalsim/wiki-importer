@@ -1,10 +1,13 @@
-package main
+package names
 
 import (
 	"context"
-	"os"
+	"log"
+
+	"fiatjaf/wiki-importer/common"
 
 	"github.com/nbd-wtf/go-nostr"
+	"github.com/urfave/cli/v3"
 )
 
 var (
@@ -13,10 +16,32 @@ var (
 	relay    string
 )
 
-func main() {
-	nostrKey = os.Getenv("BEHINDTHENAME_NOSTR_KEY")
-	relay = os.Getenv("BEHINDTHENAME_RELAY")
+func HandleNames(ctx context.Context, l *log.Logger, c *cli.Command) error {
+	var err error
 
-	pool = nostr.NewSimplePool(context.Background())
-	behindthename()
+	continueFrom := int(c.Uint("continue"))
+
+	nostrKey, err = common.GetRequiredEnv("BEHINDTHENAME_NOSTR_KEY")
+	if err != nil {
+		return err
+	}
+
+	relay, err = common.GetRequiredEnv("BEHINDTHENAME_RELAY")
+	if err != nil {
+		return err
+	}
+
+	pool = nostr.NewSimplePool(ctx)
+
+	if err := HandleBehindthename(ctx, NewBehindTheNameParams(
+		nostrKey,
+		pool,
+		relay,
+		continueFrom,
+		l,
+	)); err != nil {
+		return err
+	}
+
+	return nil
 }

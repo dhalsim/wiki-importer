@@ -1,12 +1,11 @@
-package main
+package names
 
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
-	"os"
 	"slices"
-	"strconv"
 	"strings"
 	"time"
 
@@ -18,46 +17,80 @@ import (
 	"golang.org/x/net/html"
 )
 
-func behindthename() {
-	pageStart := 1
-	if len(os.Args) > 1 {
-		pageArg, _ := strconv.Atoi(os.Args[1])
-		if pageArg > 0 {
-			pageStart = pageArg
-		}
-	}
+// BehindTheNameParams handles Nostr configuration and operations for the behindthename package
+type BehindTheNameParams struct {
+	nostrKey     string
+	pool         *nostr.SimplePool
+	relay        string
+	continueFrom int
+	logger       *log.Logger
+}
 
-	for i := pageStart; i < 101; i++ {
-		fmt.Println("PAGE", i)
-		proceed := doPage(i)
-		if !proceed {
-			break
-		}
-		time.Sleep(time.Second * 5)
+func NewBehindTheNameParams(
+	key string,
+	p *nostr.SimplePool,
+	r string,
+	continueFrom int,
+	logger *log.Logger,
+) *BehindTheNameParams {
+	return &BehindTheNameParams{
+		nostrKey:     key,
+		pool:         p,
+		relay:        r,
+		continueFrom: continueFrom,
+		logger:       logger,
 	}
 }
 
-func doPage(num int) bool {
+func HandleBehindthename(ctx context.Context, params *BehindTheNameParams) error {
+	if params.continueFrom == 0 {
+		params.continueFrom = 1
+	}
+
+	for i := params.continueFrom; i < 101; i++ {
+		params.logger.Printf("Processing page %d", i)
+
+		proceed, err := doPage(ctx, params, i)
+		if err != nil {
+			return fmt.Errorf("process page %d: %w", i, err)
+		}
+
+		if !proceed {
+			break
+		}
+
+		time.Sleep(time.Second * 5)
+	}
+
+	return nil
+}
+
+func doPage(ctx context.Context, params *BehindTheNameParams, num int) (bool, error) {
 	var resp *http.Response
 	var err error
+
 	for {
 		resp, err = common.HttpGet(fmt.Sprintf("https://www.behindthename.com/names/%d", num))
 		if err != nil {
-			fmt.Println("error page", num, err, "trying again")
+			params.logger.Printf("error fetching page %d: %v, retrying in 5 minutes", num, err)
+
 			time.Sleep(time.Minute * 5)
+
 			continue
 		}
+
 		break
 	}
+	defer resp.Body.Close()
+
 	doc, err := goquery.NewDocumentFromReader(resp.Body)
 	if err != nil {
-		panic(err)
+		return false, fmt.Errorf("parse page HTML: %w", err)
 	}
-	resp.Body.Close()
 
 	sel := doc.Find(`.listname a[href^="/name/"]`)
 	if len(sel.Nodes) == 0 {
-		return false
+		return false, nil
 	}
 
 	sel.Each(func(_ int, sn *goquery.Selection) {
@@ -65,50 +98,76 @@ func doPage(num int) bool {
 		href = strings.TrimSpace(href)
 		name := strings.TrimSpace(sn.Text())
 
-		doName("https://www.behindthename.com"+href, name)
+		if err := doName(ctx, params, "https://www.behindthename.com"+href, name); err != nil {
+			params.logger.Printf("error processing name %s: %v", name, err)
+		}
 	})
 
-	return true
+	return true, nil
 }
 
-func doName(url string, name string) {
+func doName(ctx context.Context, params *BehindTheNameParams, url string, name string) error {
 	var resp *http.Response
 	var err error
+
 	for {
 		resp, err = common.HttpGet(url)
 		if err != nil {
-			fmt.Println("error", url, err, "trying again")
+			params.logger.Printf("error fetching name %s: %v, retrying in 5 minutes", name, err)
+
 			time.Sleep(5 * time.Minute)
+
 			continue
 		}
+
 		break
 	}
+	defer resp.Body.Close()
+
 	doc, err := goquery.NewDocumentFromReader(resp.Body)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("parse name page HTML: %w", err)
 	}
-	resp.Body.Close()
+
+	nameNodes := doc.Find(".namedef").Nodes
+	if len(nameNodes) == 0 {
+		return fmt.Errorf("no name definition found for %s", name)
+	}
 
 	def := ""
-	for c := doc.Find(".namedef").Nodes[0].FirstChild; c != nil; c = c.NextSibling {
+	for c := nameNodes[0].FirstChild; c != nil; c = c.NextSibling {
 		switch c.Type {
 		case html.TextNode:
 			def += c.Data
 		case html.ElementNode:
 			switch c.Data {
 			case "em", "span", "small":
-				def += c.FirstChild.Data
+				if c.FirstChild != nil {
+					def += c.FirstChild.Data
+				}
 			case "a":
+				if c.FirstChild == nil {
+					params.logger.Printf("Skipping empty link tag in definition for %s", name)
+					continue
+				}
 				if slices.ContainsFunc(c.Attr, func(a html.Attribute) bool { return a.Key == "href" && strings.HasPrefix(a.Val, "/name/") }) {
 					name := strings.TrimSpace(c.FirstChild.Data)
+					if name == "" {
+						params.logger.Printf("Skipping link with empty text in definition for %s", name)
+						continue
+					}
 					def += "[[" + name + "]]"
 				} else {
 					def += c.FirstChild.Data
 				}
 			case "i":
-				def += "_" + c.FirstChild.Data + "_"
+				if c.FirstChild != nil {
+					def += "_" + c.FirstChild.Data + "_"
+				}
 			case "b":
-				def += "**" + c.FirstChild.Data + "**"
+				if c.FirstChild != nil {
+					def += "**" + c.FirstChild.Data + "**"
+				}
 			}
 		}
 	}
@@ -125,18 +184,25 @@ func doName(url string, name string) {
 		},
 		Content: def,
 	}
-	evt.Sign(nostrKey)
-	fmt.Println(d, "|", name)
 
-	r, err := pool.EnsureRelay(relay)
+	evt.Sign(nostrKey)
+
+	params.logger.Printf("Publishing %s | %s", d, name)
+
+	r, err := params.pool.EnsureRelay(params.relay)
 	if err != nil {
-		fmt.Println("error connecting to relay", err)
+		params.logger.Printf("error connecting to relay: %v, retrying in 5 minutes", err)
 		time.Sleep(time.Minute * 5)
-		return
+
+		return err
 	}
-	if err := r.Publish(context.Background(), evt); err != nil {
-		fmt.Println("error publishing", err)
+
+	if err := r.Publish(ctx, evt); err != nil {
+		params.logger.Printf("error publishing: %v, retrying in 5 minutes", err)
 		time.Sleep(time.Minute * 5)
-		return
+
+		return err
 	}
+
+	return nil
 }

@@ -9,6 +9,7 @@ import (
 
 	"fiatjaf/wiki-importer/mediawiki"
 	"fiatjaf/wiki-importer/movies"
+	"fiatjaf/wiki-importer/names"
 	"fiatjaf/wiki-importer/progarchives"
 
 	"github.com/urfave/cli/v3"
@@ -26,6 +27,14 @@ func main() {
 		Name:  "wiki-importer",
 		Usage: "Import data from various sources and publish to Nostr as NIP-54 Wiki content",
 		Commands: []*cli.Command{
+			{
+				Name:  "names",
+				Usage: "Import names and their meanings from behindthename.com",
+				Flags: []cli.Flag{
+					continueFlag,
+				},
+				Action: handleNames,
+			},
 			{
 				Name:  "progarchives",
 				Usage: "Import data from progarchives",
@@ -169,6 +178,19 @@ func handleMediaWiki(ctx context.Context, c *cli.Command) error {
 
 	if err := mediawiki.HandleMediaWiki(ctx, logger, c); err != nil {
 		return fmt.Errorf("handle mediawiki: %w", err)
+	}
+
+	return nil
+}
+
+func handleNames(ctx context.Context, c *cli.Command) error {
+	logger, err := createLogger("names")
+	if err != nil {
+		return fmt.Errorf("create logger: %w", err)
+	}
+
+	if err := names.HandleNames(ctx, logger, c); err != nil {
+		return fmt.Errorf("handle names: %w", err)
 	}
 
 	return nil
